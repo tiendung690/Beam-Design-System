@@ -1,6 +1,7 @@
 import { Meta } from "@storybook/react";
 import { observable } from "mobx";
 import { useContext, useMemo, useState } from "react";
+import { VariableSizeGrid } from "react-window";
 import {
   condensedStyle,
   GridCollapseContext,
@@ -23,6 +24,10 @@ export default {
 type Data = { name: string; value: number };
 type Row = SimpleHeaderAndDataOf<Data>;
 
+const nameColumn: GridColumn<Row> = { header: "Name", data: ({ name }) => name };
+const valueColumn: GridColumn<Row> = { header: "Value", data: ({ value }) => value };
+const actionColumn: GridColumn<Row> = { header: "Action", data: () => <div>Actions</div> };
+
 // Test case
 // Potential algorithm: see k1, scan until the next k1
 // h1
@@ -39,8 +44,6 @@ type Row = SimpleHeaderAndDataOf<Data>;
 // f1 (total-total)
 
 export function Sorting() {
-  const nameColumn: GridColumn<Row> = { header: "Name", data: ({ name }) => name };
-  const valueColumn: GridColumn<Row> = { header: "Value", data: ({ value }) => value };
   const actionColumn: GridColumn<Row> = { header: "Action", data: () => <div>Actions</div>, sort: false };
   return (
     <GridTable
@@ -85,8 +88,6 @@ export const Hovering = newStory(
 );
 
 export function Filtering() {
-  const nameColumn: GridColumn<Row> = { header: "Name", data: ({ name }) => name };
-  const valueColumn: GridColumn<Row> = { header: "Value", data: ({ value }) => value };
   const actionColumn: GridColumn<Row> = { header: "Action", data: () => <div>Actions</div>, sort: false };
   const rows: GridDataRow<Row>[] = useMemo(
     () => [
@@ -112,8 +113,6 @@ export function Filtering() {
 }
 
 export function NoRowsFallback() {
-  const nameColumn: GridColumn<Row> = { header: "Name", data: ({ name }) => name };
-  const valueColumn: GridColumn<Row> = { header: "Value", data: ({ value }) => value };
   return (
     <GridTable
       columns={[nameColumn, valueColumn]}
@@ -202,8 +201,6 @@ export function ObservableRows() {
 }
 
 export function StickyHeader() {
-  const nameColumn: GridColumn<Row> = { header: "Name", data: ({ name }) => name };
-  const valueColumn: GridColumn<Row> = { header: "Value", data: ({ value }) => value };
   const actionColumn: GridColumn<Row> = {
     header: () => (
       <div>
@@ -233,9 +230,6 @@ export function zeroTo(n: number): number[] {
 }
 
 export const Condensed = newStory(() => {
-  const nameColumn: GridColumn<Row> = { header: "Name", data: ({ name }) => name };
-  const valueColumn: GridColumn<Row> = { header: "Value", data: ({ value }) => value };
-  const actionColumn: GridColumn<Row> = { header: "Action", data: () => <div>Actions</div> };
   return (
     <GridTable<Row>
       columns={[nameColumn, valueColumn, actionColumn]}
@@ -251,10 +245,6 @@ export const Condensed = newStory(() => {
 }, {});
 
 export function AsTable() {
-  const nameColumn: GridColumn<Row> = { header: "Name", data: ({ name }) => name };
-  const valueColumn: GridColumn<Row> = { header: "Value", data: ({ value }) => value };
-  const actionColumn: GridColumn<Row> = { header: "Action", data: () => <div>Actions</div> };
-
   return (
     <GridTable
       as="table"
@@ -271,8 +261,6 @@ export function AsTable() {
 
 export function AsTableWithCustomStyles() {
   const nameColumn: GridColumn<Row> = { header: "Name", data: ({ name }) => name, w: "75px", align: "right" };
-  const valueColumn: GridColumn<Row> = { header: "Value", data: ({ value }) => value };
-  const actionColumn: GridColumn<Row> = { header: "Action", data: () => <div>Actions</div> };
 
   return (
     <GridTable
@@ -294,9 +282,6 @@ export function AsTableWithCustomStyles() {
 
 export const AsTableWithRowLink = newStory(
   () => {
-    const nameColumn: GridColumn<Row> = { header: "Name", data: ({ name }) => name };
-    const valueColumn: GridColumn<Row> = { header: "Value", data: ({ value }) => value };
-    const actionColumn: GridColumn<Row> = { header: "Action", data: () => <div>Actions</div> };
     const rowStyles: GridRowStyles<Row> = {
       data: { indent: "2", rowLink: () => "http://homebound.com" },
       header: {},
@@ -317,3 +302,55 @@ export const AsTableWithRowLink = newStory(
   },
   { decorators: [withRouter()] },
 );
+
+/** Performance Test Stories */
+/** Rendering 100 rows with div elements */
+export function Basic100Div() {
+  return (
+    <GridTable<Row>
+      columns={[nameColumn, valueColumn]}
+      rows={[
+        { kind: "header", id: "header" },
+        ...zeroTo(100).map((i) => ({ kind: "data" as const, id: `${i}`, name: `${i}`, value: i })),
+      ]}
+    />
+  );
+}
+/** Rendering 100 rows with table elements */
+export function Basic100Table() {
+  return (
+    <GridTable<Row>
+      as="table"
+      columns={[nameColumn, valueColumn]}
+      rows={[
+        { kind: "header", id: "header" },
+        ...zeroTo(100).map((i) => ({ kind: "data" as const, id: `${i}`, name: `${i}`, value: i })),
+      ]}
+    />
+  );
+}
+/** Rendering 100 rows with react-window */
+export function Basic100ReactWindow() {
+  return <Table />;
+}
+
+function Table() {
+  return (
+    <VariableSizeGrid
+      columnCount={2}
+      columnWidth={(i) => 200}
+      height={56 * 10}
+      rowCount={100}
+      rowHeight={(i) => 56}
+      width={500}
+    >
+      {({ columnIndex, rowIndex, style }) => {
+        return (
+          <div style={style}>
+            Item {rowIndex}, {columnIndex}
+          </div>
+        );
+      }}
+    </VariableSizeGrid>
+  );
+}
