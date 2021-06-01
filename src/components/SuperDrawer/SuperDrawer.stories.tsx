@@ -1,7 +1,7 @@
 import { Meta } from "@storybook/react";
 import { useEffect, useRef } from "react";
 import { Button, Css, GridColumn, GridRowStyles, GridTable, SimpleHeaderAndDataOf } from "src";
-import { GridDataRow, GridRowLookup } from "src/components/GridTable";
+import { GridDataRow, GridRowLookup } from "src/components";
 import { withDimensions, withSuperDrawer } from "src/utils/sb";
 import { SuperDrawer as SuperDrawerComponent, SuperDrawerContent, useSuperDrawer } from "./index";
 

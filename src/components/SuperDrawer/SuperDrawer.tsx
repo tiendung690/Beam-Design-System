@@ -134,6 +134,7 @@ interface SuperDrawerContentProps {
  */
 export const SuperDrawerContent = ({ children, actions }: SuperDrawerContentProps) => {
   const { contentStack, closeInDrawer } = useSuperDrawer();
+  const testId = useTestIds({}, "superDrawerContent");
 
   // Determine if the current element is a new content element or an detail element
   const { type } = contentStack[contentStack.length - 1] ?? {};
@@ -141,7 +142,7 @@ export const SuperDrawerContent = ({ children, actions }: SuperDrawerContentProp
   const ContentWrapper = useCallback(
     ({ children }: { children: ReactNode }) =>
       type === "new" ? (
-        <motion.div key="content" css={Css.p3.fg1.$} style={{ overflow: "auto" }}>
+        <motion.div key="content" css={Css.p3.fg1.$} style={{ overflow: "auto" }} {...testId.new}>
           {children}
         </motion.div>
       ) : (
@@ -149,6 +150,7 @@ export const SuperDrawerContent = ({ children, actions }: SuperDrawerContentProp
           css={Css.px3.pt2.pb3.fg1.$}
           animate={{ overflow: "auto" }}
           transition={{ overflow: { delay: 0.3 } }}
+          {...testId.detail}
         >
           <Button label="Back" icon="chevronLeft" variant="tertiary" onClick={() => closeInDrawer()} />
           <motion.div

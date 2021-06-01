@@ -1,6 +1,11 @@
+import { composeStories } from "@storybook/testing-react";
 import { useEffect } from "react";
 import { render, withSuperDrawer } from "src/utils/rtl";
 import { useSuperDrawer } from "./index";
+import * as stories from "./SuperDrawer.stories";
+
+// Compile Storybook stories
+const { Open } = composeStories(stories);
 
 describe("SuperDrawer", () => {
   const consoleErrorMock = jest.fn();
@@ -9,9 +14,9 @@ describe("SuperDrawer", () => {
     console.error = consoleErrorMock;
   });
 
-  it("should allow `new` element to be added", async () => {
-    const { superDrawerContent } = await render(<TestDrawerContent openInDrawer />, withSuperDrawer);
-    expect(superDrawerContent()).toBeTruthy();
+  it("should open when 'openInDrawer' new element type is called", async () => {
+    const { superDrawerContent_new } = await render(<Open />);
+    expect(superDrawerContent_new()).toBeTruthy();
   });
 
   it("should not allow `detail` element to be added", async () => {

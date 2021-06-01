@@ -1,0 +1,8 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cypress-io/cypress/develop/cli/schema/cypress.schema.json",
+  "fixturesFolder": false,
+  "testFiles": "**/**/*.cy.tsx",
+  "componentFolder": "src",
+  "viewportHeight": 1000,
+  "viewportWidth": 1000
+}
