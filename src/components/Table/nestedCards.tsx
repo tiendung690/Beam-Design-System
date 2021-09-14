@@ -119,9 +119,9 @@ export function maybeAddCardPadding(openCards: NestedCardStyle[], column: "first
     div = (
       <div
         css={{
-          ...Css.h100.bgColor(card.bgColor).if(!!card.bColor).bc(card.bColor).$,
-          ...(column === "first" && Css.plPx(card.pxPx).if(!!card.bColor).bl.$),
-          ...(column === "final" && Css.prPx(card.pxPx).if(!!card.bColor).br.$),
+          ...Css.bgColor(card.bgColor).h100.if(!!card.bColor).bc(card.bColor).$,
+          ...(isFirst && Css.plPx(card.pxPx).if(!!card.bColor).bl.$),
+          ...(isFinal && Css.prPx(card.pxPx).if(!!card.bColor).br.$),
         }}
       >
         {div}
