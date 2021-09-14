@@ -75,7 +75,7 @@ const rows: GridDataRow<Row>[] = [
           {
             kind: "task",
             id: "t1",
-            name: "task #1",
+            name: "task #2",
             startDate: "May. 1, 2021",
             endDate: "May. 10, 2021",
             duration: 10,
@@ -88,7 +88,7 @@ const rows: GridDataRow<Row>[] = [
       },
       // TODO: Must implement colspan support
       { kind: "add", id: "add 1" },
-      { kind: "add", id: "add 1" },
+      { kind: "add", id: "add 2" },
     ],
   },
 ];
@@ -144,7 +144,7 @@ const spacing = { brPx: 8, pxPx: 16, spacerPx: 8 };
 const nestedStyle: GridStyle = {
   headerCellCss: Css.bgGray100.xsEm.gray700.p1.df.aic.$,
   firstNonHeaderRowCss: Css.mt1.$,
-  cellCss: Css.xs.$,
+  cellCss: Css.xs.aic.$,
   nestedCards: {
     topLevelSpacerPx: 8,
     kinds: {

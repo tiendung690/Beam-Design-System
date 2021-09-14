@@ -353,6 +353,7 @@ export function GridTable<R extends Kinded, S = {}, X extends Only<GridTableXss,
           maxCardPadding = nestedCards.maxCardPadding(maxCardPadding);
         }
         filteredRows.push([row, makeRowComponent(row)]);
+        nestedCards && (row.children?.length || 0) > 0 && nestedCards.addSpacerBetweenChildren();
       }
 
       const isCollapsed = collapsedIds.includes(row.id);
@@ -360,6 +361,7 @@ export function GridTable<R extends Kinded, S = {}, X extends Only<GridTableXss,
         visitRows(row.children, isCard);
       }
 
+      // isCard && nestedCards && (row.children?.length || 0) > 0 && nestedCards.addSpacerBetweenChildren();
       isCard && nestedCards && nestedCards.closeCard();
     }
 

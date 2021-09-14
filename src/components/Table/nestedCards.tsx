@@ -98,8 +98,8 @@ export function makeOpenOrCloseCard(openCards: NestedCardStyle[], kind: "open" |
             Css.add({
               [`border${place}RightRadius`]: `${card.brPx}px`,
               [`border${place}LeftRadius`]: `${card.brPx}px`,
-            }).hPx(card.brPx).$),
-          ...(card.bColor && Css.bc(card.bColor).bl.br.if(first)[btOrBb].$),
+            }).hPx(card.pxPx).$),
+          ...(card.bColor && Css.bc(card.bColor).bl.br.if(!div)[btOrBb].$),
         }}
       >
         {div}
