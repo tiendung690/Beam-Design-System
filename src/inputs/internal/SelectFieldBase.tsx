@@ -1,34 +1,23 @@
 import { Selection } from "@react-types/shared";
 import { Key, ReactNode, useEffect, useRef, useState } from "react";
 import { useButton, useComboBox, useFilter, useOverlayPosition } from "react-aria";
-import { Item, useComboBoxState, useMultipleSelectionState } from "react-stately";
+import { Item, useAsyncList, useComboBoxState, useMultipleSelectionState } from "react-stately";
 import { resolveTooltip } from "src/components";
 import { Popover } from "src/components/internal";
 import { PresentationFieldProps } from "src/components/PresentationContext";
 import { Css, px } from "src/Css";
 import { ListBox } from "src/inputs/internal/ListBox";
 import { SelectFieldInput } from "src/inputs/internal/SelectFieldInput";
-import { keyToValue, Value, valueToKey } from "src/inputs/Value";
+import { Value, valueToKey } from "src/inputs/Value";
 import { BeamFocusableProps } from "src/interfaces";
 
-type FieldState<O> = {
-  isOpen: boolean;
-  selectedKeys: Key[];
-  inputValue: string;
-  filteredOptions: O[];
-  selectedOptions: O[];
-};
-
+// export type SelectFieldBaseProps<O, V extends Value> = AsyncSelectFieldProps<O, V> | SyncSelectFieldProps<O, V>;
 export interface SelectFieldBaseProps<O, V extends Value> extends BeamSelectFieldBaseProps<O, V> {
-  /** Renders `opt` in the dropdown menu, defaults to the `getOptionLabel` prop. */
-  getOptionMenuLabel?: (opt: O) => string | ReactNode;
-  getOptionValue: (opt: O) => V;
-  getOptionLabel: (opt: O) => string;
-  /** The current value; it can be `undefined`, even if `V` cannot be. */
+  options: O[] | ((search?: string) => Promise<O[]>);
+  /** The selected options; it can be `undefined`, even if `O` cannot be. */
+  selectedOptions?: O[] | undefined;
+  /** The selected values; it can be `undefined`, even if `V` cannot be. */
   values: V[] | undefined;
-  onSelect: (values: V[]) => void;
-  options: O[];
-  multiselect?: boolean;
 }
 
 /**
@@ -42,32 +31,56 @@ export interface SelectFieldBaseProps<O, V extends Value> extends BeamSelectFiel
  */
 export function SelectFieldBase<O, V extends Value>(props: SelectFieldBaseProps<O, V>): JSX.Element {
   const {
-    compact,
     disabled,
-    errorMsg,
-    helperText,
-    label,
-    hideLabel,
-    required,
-    inlineLabel,
     readOnly,
     onSelect,
-    fieldDecoration,
     options,
-    onBlur,
-    onFocus,
     multiselect = false,
     getOptionLabel,
     getOptionValue,
     getOptionMenuLabel = getOptionLabel,
-    sizeToContent = false,
-    values,
     nothingSelectedText = "",
     contrast,
     disabledOptions,
     borderless,
+    values,
     ...otherProps
   } = props;
+
+  const selectedOptions =
+    props.selectedOptions ?? (Array.isArray(options) ? options.filter((o) => values?.includes(getOptionValue(o))) : []);
+
+  const asyncList = useAsyncList<O>({
+    load: async () => {
+      if (firstRender.current) {
+        return { items: selectedOptions };
+      }
+
+      // asyncList.remove(...selectedOptions.map((o) => valueToKey(getOptionValue(o))));
+      if (Array.isArray(options)) {
+        return { items: options };
+      }
+
+      if (options) {
+        // Here we should do something like:
+        // const { items, loadMore } = await options(fieldState.inputValue);
+        const items = await options(fieldState.inputValue);
+        return { items };
+      }
+
+      return { items: selectedOptions };
+    },
+  });
+
+  const firstOpen = useRef(true);
+  async function maybeInitLoad() {
+    if (firstOpen.current) {
+      // When we do our initial load then we need to remove the initial items we added, as loadMore appends more items.
+      // asyncList.remove(...selectedOptions.map((o) => valueToKey(getOptionValue(o))));
+      await asyncList.reload();
+      firstOpen.current = false;
+    }
+  }
 
   const { contains } = useFilter({ sensitivity: "base" });
   const isDisabled = !!disabled;
@@ -99,33 +112,36 @@ export function SelectFieldBase<O, V extends Value>(props: SelectFieldBaseProps<
         selectedKeys: [],
         selectedOptions: [],
       });
-      selectionChanged && onSelect([]);
+      selectionChanged && onSelect([], []);
       return;
     }
-    const keysArray = [...keys.values()];
-    const firstKey = keysArray[0];
-    // Even though the key is number|string, this will always be a string
-    const firstSelectedOption = options.find((o) => valueToKey(getOptionValue(o)) === firstKey);
+
+    const selectedKeys = [...keys.values()];
+    const selectedOptions = asyncList.items.filter((o) => selectedKeys.includes(valueToKey(getOptionValue(o))));
+    const firstSelectedOption = selectedOptions[0];
+
     if (multiselect) {
       setFieldState({
         ...fieldState,
         // If menu is open then reset inputValue to "". Otherwise set inputValue depending on number of options selected.
-        inputValue: state.isOpen ? "" : keysArray.length === 1 ? getOptionLabel(firstSelectedOption!) : "",
-        selectedKeys: keysArray as Key[],
-        selectedOptions: options.filter((o) => keysArray.includes(valueToKey(getOptionValue(o)))),
-        filteredOptions: options,
+        inputValue: state.isOpen ? "" : firstSelectedOption ? getOptionLabel(firstSelectedOption!) : "",
+        selectedKeys,
+        selectedOptions,
+        filteredOptions: asyncList.items,
       });
     } else {
       setFieldState({
         ...fieldState,
         isOpen: false,
         inputValue: firstSelectedOption ? getOptionLabel(firstSelectedOption) : "",
-        selectedKeys: [firstKey] as Key[],
-        selectedOptions: firstSelectedOption ? [firstSelectedOption] : [],
+        selectedKeys,
+        selectedOptions,
+        filteredOptions: asyncList.items,
       });
     }
-    selectionChanged && onSelect(([...keys.values()] as Key[]).map(keyToValue) as V[]);
 
+    selectionChanged && onSelect(selectedKeys as V[], selectedOptions);
+    debugger;
     if (!multiselect) {
       // When a single select menu item changes, then blur the field AFTER `onSelect` has been called
       inputRef.current?.blur();
@@ -133,15 +149,19 @@ export function SelectFieldBase<O, V extends Value>(props: SelectFieldBaseProps<
   }
 
   function onInputChange(value: string) {
+    console.log("onInputChange", value);
     setFieldState((prevState) => ({
       ...prevState,
       isOpen: true,
       inputValue: value,
-      filteredOptions: options.filter((o) => contains(getOptionLabel(o), value)),
+      filteredOptions: asyncList.items.filter((o) => contains(getOptionLabel(o), value)),
     }));
   }
 
   function onOpenChange(isOpen: boolean) {
+    if (isOpen) {
+      maybeInitLoad();
+    }
     setFieldState((prevState) => ({
       ...prevState,
       inputValue: multiselect && isOpen ? "" : prevState.inputValue,
@@ -150,24 +170,48 @@ export function SelectFieldBase<O, V extends Value>(props: SelectFieldBaseProps<
   }
 
   function initFieldState(): FieldState<O> {
-    // Use the current value to find the option
-    const selectedKeys: V[] = values ?? [];
-    const selectedOptions = options.filter((o) => selectedKeys.includes(getOptionValue(o)));
     return {
       isOpen: false,
-      selectedKeys: selectedKeys.map(valueToKey),
+      selectedKeys: selectedOptions?.map((o) => valueToKey(getOptionValue(o))) ?? [],
       inputValue:
         selectedOptions.length === 1
           ? getOptionLabel(selectedOptions[0])
           : multiselect && selectedOptions.length === 0
           ? nothingSelectedText
           : "",
-      filteredOptions: options,
+      filteredOptions: asyncList.items,
       selectedOptions: selectedOptions,
     };
   }
 
+  useEffect(() => {
+    if (!(asyncList.items.length === 0 && fieldState.filteredOptions.length === 0)) {
+      setFieldState((prevState) => ({
+        ...prevState,
+        // Should we filter the options, perhaps that should be done in the asyncList once we move server side filtering.
+        filteredOptions: asyncList.items,
+      }));
+    }
+  }, [asyncList.items]);
+
   const [fieldState, setFieldState] = useState<FieldState<O>>(initFieldState);
+
+  // Ensure we reset if the field's values change and the user is not actively selecting options.
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (!firstRender.current && !state.isOpen) {
+      setFieldState(initFieldState);
+    }
+    firstRender.current = false;
+  }, [selectedOptions]);
+
+  // Used to calculate the rendered width of the combo box (input + button)
+  const comboBoxRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputWrapRef = useRef<HTMLDivElement | null>(null);
+  const listBoxRef = useRef<HTMLDivElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
 
   const comboBoxProps = {
     ...otherProps,
@@ -176,7 +220,6 @@ export function SelectFieldBase<O, V extends Value>(props: SelectFieldBaseProps<
     items: fieldState.filteredOptions,
     isDisabled,
     isReadOnly,
-    label,
     onInputChange,
     onOpenChange,
     menuTrigger: "focus" as const,
@@ -189,6 +232,7 @@ export function SelectFieldBase<O, V extends Value>(props: SelectFieldBaseProps<
 
   const state = useComboBoxState<any>({
     ...comboBoxProps,
+    allowsEmptyCollection: true,
     // useComboBoxState.onSelectionChange will be executed if a keyboard interaction (Enter key) is used to select an item
     onSelectionChange: (key) => {
       // ignore undefined/null keys - `null` can happen if input field's value is completely deleted after having a value assigned.
@@ -212,21 +256,6 @@ export function SelectFieldBase<O, V extends Value>(props: SelectFieldBaseProps<
 
   //@ts-ignore - `selectionManager.state` exists, but not according to the types
   state.selectionManager.state = multipleSelectionState;
-
-  // Ensure we reset if the field's values change and the user is not actively selecting options.
-  useEffect(() => {
-    if (!state.isOpen) {
-      setFieldState(initFieldState);
-    }
-  }, [values]);
-
-  // Used to calculate the rendered width of the combo box (input + button)
-  const comboBoxRef = useRef<HTMLDivElement | null>(null);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const inputWrapRef = useRef<HTMLDivElement | null>(null);
-  const listBoxRef = useRef<HTMLDivElement | null>(null);
-  const popoverRef = useRef<HTMLDivElement | null>(null);
 
   // For the most part, the returned props contain `aria-*` and `id` attributes for accessibility purposes.
   const {
@@ -272,27 +301,14 @@ export function SelectFieldBase<O, V extends Value>(props: SelectFieldBaseProps<
         {...otherProps}
         buttonProps={buttonProps}
         buttonRef={triggerRef}
-        compact={compact}
-        errorMsg={errorMsg}
-        helperText={helperText}
-        fieldDecoration={fieldDecoration}
         inputProps={inputProps}
         inputRef={inputRef}
         inputWrapRef={inputWrapRef}
-        isDisabled={isDisabled}
-        required={required}
-        isReadOnly={isReadOnly}
         state={state}
-        onBlur={onBlur}
-        onFocus={onFocus}
-        inlineLabel={inlineLabel}
-        label={label}
-        hideLabel={hideLabel}
         labelProps={labelProps}
         selectedOptions={fieldState.selectedOptions}
         getOptionValue={getOptionValue}
         getOptionLabel={getOptionLabel}
-        sizeToContent={sizeToContent}
         contrast={contrast}
         nothingSelectedText={nothingSelectedText}
         borderless={borderless}
@@ -323,15 +339,29 @@ export function SelectFieldBase<O, V extends Value>(props: SelectFieldBaseProps<
   );
 }
 
-export interface BeamSelectFieldBaseProps<T, V extends Value> extends BeamFocusableProps, PresentationFieldProps {
+type FieldState<O> = {
+  isOpen: boolean;
+  selectedKeys: Key[];
+  inputValue: string;
+  filteredOptions: O[];
+  selectedOptions: O[];
+};
+
+export interface BeamSelectFieldBaseProps<O, V extends Value> extends BeamFocusableProps, PresentationFieldProps {
+  /** Renders `opt` in the dropdown menu, defaults to the `getOptionLabel` prop. */
+  getOptionMenuLabel?: (opt: O) => string | ReactNode;
+  getOptionValue: (opt: O) => V;
+  getOptionLabel: (opt: O) => string;
+  onSelect: (values: V[], options: O[]) => void;
+  multiselect?: boolean;
   disabledOptions?: V[];
-  // Whether the field is disabled. If a ReactNode, it's treated as a "disabled reason" that's shown in a tooltip.
+  /** Whether the field is disabled. If a ReactNode, it's treated as a "disabled reason" that's shown in a tooltip.*/
   disabled?: boolean | ReactNode;
   required?: boolean;
   errorMsg?: string;
   helperText?: string | ReactNode;
   /** Allow placing an icon/decoration within the input field. */
-  fieldDecoration?: (opt: T) => ReactNode;
+  fieldDecoration?: (opt: O) => ReactNode;
   /** Sets the form field label. */
   label: string;
   /** Renders the label inside the input field, i.e. for filters. */

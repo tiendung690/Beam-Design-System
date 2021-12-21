@@ -15,8 +15,6 @@ interface SelectFieldInputProps<O, V extends Value> extends PresentationFieldPro
   inputRef: MutableRefObject<HTMLInputElement | null>;
   inputWrapRef: MutableRefObject<HTMLDivElement | null>;
   state: ComboBoxState<O>;
-  isDisabled: boolean;
-  isReadOnly: boolean;
   fieldDecoration?: (opt: O) => ReactNode;
   errorMsg?: string;
   required?: boolean;
@@ -29,7 +27,7 @@ interface SelectFieldInputProps<O, V extends Value> extends PresentationFieldPro
   selectedOptions: O[];
   getOptionValue: (opt: O) => V;
   getOptionLabel: (opt: O) => string;
-  sizeToContent: boolean;
+  sizeToContent?: boolean;
   contrast?: boolean;
   nothingSelectedText: string;
   tooltip?: ReactNode;
@@ -38,28 +36,18 @@ interface SelectFieldInputProps<O, V extends Value> extends PresentationFieldPro
 export function SelectFieldInput<O, V extends Value>(props: SelectFieldInputProps<O, V>) {
   const {
     inputProps,
-    inputRef,
-    inputWrapRef,
     buttonProps,
     buttonRef,
-    compact,
     errorMsg,
-    required,
-    helperText,
     state,
     fieldDecoration,
-    isDisabled,
-    isReadOnly,
     onBlur,
     onFocus,
     inlineLabel,
-    label,
-    labelProps,
-    hideLabel,
     selectedOptions,
     getOptionValue,
     getOptionLabel,
-    sizeToContent,
+    sizeToContent = false,
     contrast = false,
     nothingSelectedText,
     ...otherProps
@@ -75,19 +63,9 @@ export function SelectFieldInput<O, V extends Value>(props: SelectFieldInputProp
   return (
     <TextFieldBase
       {...otherProps}
-      inputRef={inputRef}
-      inputWrapRef={inputWrapRef}
-      label={label}
-      readOnly={isReadOnly}
-      hideLabel={hideLabel}
-      labelProps={labelProps}
-      inlineLabel={inlineLabel}
-      compact={compact}
-      required={required}
       errorMsg={errorMsg}
-      helperText={helperText}
       contrast={contrast}
-      xss={!inlineLabel && !isReadOnly ? Css.fw5.$ : {}}
+      xss={!inlineLabel && !inputProps.readOnly ? Css.fw5.$ : {}}
       startAdornment={
         (showNumSelection && (
           <span css={Css.wPx(16).hPx(16).fs0.br100.bgLightBlue700.white.tinyEm.df.aic.jcc.$}>
@@ -97,14 +75,14 @@ export function SelectFieldInput<O, V extends Value>(props: SelectFieldInputProp
         (showFieldDecoration && fieldDecoration(selectedOptions[0]))
       }
       endAdornment={
-        !isReadOnly && (
+        !inputProps.readOnly && (
           <button
             {...buttonProps}
-            disabled={isDisabled}
+            disabled={inputProps.disabled}
             ref={buttonRef}
             css={{
               ...Css.br4.outline0.gray700.if(contrast).gray400.$,
-              ...(isDisabled ? Css.cursorNotAllowed.gray400.if(contrast).gray600.$ : {}),
+              ...(inputProps.disabled ? Css.cursorNotAllowed.gray400.if(contrast).gray600.$ : {}),
             }}
           >
             <Icon icon={state.isOpen ? "chevronUp" : "chevronDown"} />
@@ -158,7 +136,7 @@ export function SelectFieldInput<O, V extends Value>(props: SelectFieldInputProp
             // `inputValue`, so it thinks it needs to call `resetInputValue()`.
             //
             // I assume we don't pass `selectedKey` b/c we support multiple keys.
-            if (isReadOnly) {
+            if (inputProps.readOnly) {
               return;
             }
             setIsFocused(false);
@@ -170,7 +148,7 @@ export function SelectFieldInput<O, V extends Value>(props: SelectFieldInputProp
             state.selectionManager.setSelectedKeys(state.selectionManager.selectedKeys);
           },
           onFocus: () => {
-            if (isReadOnly) return;
+            if (inputProps.readOnly) return;
             setIsFocused(true);
             maybeCall(onFocus);
             state.open();

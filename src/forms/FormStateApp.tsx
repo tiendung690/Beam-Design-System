@@ -13,7 +13,6 @@ import {
 import { Css } from "src/Css";
 import {
   BoundDateField,
-  BoundMultiSelectField,
   BoundNumberField,
   BoundSelectField,
   BoundSwitchField,
@@ -31,10 +30,37 @@ import { useComputed } from "src/hooks";
 import { CheckboxGroupItemOption } from "src/inputs";
 
 export function FormStateApp() {
+  const sports = [
+    { id: undefined as any, name: "Undecided" },
+    { id: "s:1", name: "Football" },
+    { id: "s:2", name: "Soccer" },
+  ];
+
+  const colors: CheckboxGroupItemOption[] = [
+    { value: "c:1", label: "Blue" },
+    { value: "c:2", label: "Red" },
+    { value: "c:3", label: "Green" },
+  ];
+
+  const shapes = [
+    { id: "sh:1", name: "Triangle" },
+    { id: "sh:2", name: "Square" },
+    { id: "sh:3", name: "Circle" },
+  ];
+
+  const animals = [
+    { value: "a:1", label: "Cat" },
+    { value: "a:2", label: "Dog" },
+    { value: "a:3", label: "Fish" },
+    { value: "a:4", label: "Iguana" },
+    { value: "a:5", label: "Turtle" },
+  ];
+
   // Simulate getting the initial form state back from a server call
   const queryResponse = useMemo(
     () => ({
       firstName: "a1",
+      favoriteSport: sports[1],
       books: [...Array(2)].map((_, i) => ({
         id: String(i),
         title: `b${i}`,
@@ -62,32 +88,6 @@ export function FormStateApp() {
     [],
   );
 
-  const sports = [
-    { id: undefined as any, name: "Undecided" },
-    { id: "s:1", name: "Football" },
-    { id: "s:2", name: "Soccer" },
-  ];
-
-  const colors: CheckboxGroupItemOption[] = [
-    { value: "c:1", label: "Blue" },
-    { value: "c:2", label: "Red" },
-    { value: "c:3", label: "Green" },
-  ];
-
-  const shapes = [
-    { id: "sh:1", name: "Triangle" },
-    { id: "sh:2", name: "Square" },
-    { id: "sh:3", name: "Circle" },
-  ];
-
-  const animals = [
-    { value: "a:1", label: "Cat" },
-    { value: "a:2", label: "Dog" },
-    { value: "a:3", label: "Fish" },
-    { value: "a:4", label: "Iguana" },
-    { value: "a:5", label: "Turtle" },
-  ];
-
   return (
     <Observer>
       {() => (
@@ -106,7 +106,7 @@ export function FormStateApp() {
               <BoundNumberField field={formState.heightInInches} />
               <FormDivider />
               <BoundSelectField field={formState.favoriteSport} options={sports} />
-              <BoundMultiSelectField field={formState.favoriteShapes} options={shapes} />
+              {/*<BoundMultiSelectField field={formState.favoriteShapes} options={shapes} />*/}
               <BoundCheckboxGroupField field={formState.favoriteColors} options={colors} />
               <BoundToggleChipGroupField field={formState.animals} options={animals} />
               <FormDivider />

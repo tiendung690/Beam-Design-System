@@ -2,6 +2,8 @@
 // by a GraphQL schema for a `saveAuthor` mutation that takes an author
 // plus the author's books.
 
+import { HasIdAndName } from "src/types";
+
 export const jan1 = new Date(2020, 0, 1);
 export const jan2 = new Date(2020, 0, 2);
 export const dd100: DeweyDecimalClassification = { number: "100", category: "Philosophy" };
@@ -17,7 +19,7 @@ export interface AuthorInput {
   royaltiesInCents?: number | null;
   books?: BookInput[] | null;
   address?: AuthorAddress | null;
-  favoriteSport?: string | null;
+  favoriteSport?: HasIdAndName | null;
   favoriteColors?: string[] | null;
   favoriteShapes?: string[] | null;
   isAvailable?: boolean | null;
